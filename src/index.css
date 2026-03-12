@@ -1,0 +1,29 @@
+@import "https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css";
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Pretendard", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --color-duckweed-50: #f0fdf4;
+  --color-duckweed-100: #dcfce7;
+  --color-duckweed-200: #bbf7d0;
+  --color-duckweed-300: #86efac;
+  --color-duckweed-400: #4ade80;
+  --color-duckweed-500: #22c55e;
+  --color-duckweed-600: #16a34a;
+  --color-duckweed-700: #15803d;
+  --color-duckweed-800: #166534;
+  --color-duckweed-900: #14532d;
+
+  --color-water-400: #38bdf8;
+  --color-water-500: #0ea5e9;
+  --color-water-600: #0284c7;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
