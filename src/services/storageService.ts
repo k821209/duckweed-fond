@@ -57,3 +57,17 @@ export async function uploadGenomicFile(
   const path = `duckweed-genomics/genomic-data/${folder}/${Date.now()}_${file.name}`;
   return uploadFile(path, file, onProgress);
 }
+
+/**
+ * 게놈 브라우저용 파일 업로드
+ * genome-browser/{species}/raw/ 경로에 업로드하면
+ * Cloud Function이 자동으로 인덱싱 처리
+ */
+export async function uploadGenomeBrowserFile(
+  file: File,
+  species: string,
+  onProgress?: (progress: number) => void,
+): Promise<string> {
+  const path = `genome-browser/${species}/raw/${file.name}`;
+  return uploadFile(path, file, onProgress);
+}

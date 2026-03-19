@@ -8,8 +8,11 @@ import MapPage from './pages/MapPage';
 import Literature from './pages/Literature';
 import Download from './pages/Download';
 import About from './pages/About';
+import Genomics from './pages/Genomics';
+import GenomicsDetail from './pages/GenomicsDetail';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminUpload from './pages/admin/AdminUpload';
+import AdminGenomeUpload from './pages/admin/AdminGenomeUpload';
 import AdminManage from './pages/admin/AdminManage';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -23,6 +26,8 @@ function App() {
           <Route path="/accessions" element={<Accessions />} />
           <Route path="/accessions/:id" element={<AccessionDetail />} />
           <Route path="/map" element={<MapPage />} />
+          <Route path="/genomics" element={<Genomics />} />
+          <Route path="/genomics/:species" element={<GenomicsDetail />} />
           <Route path="/literature" element={<Literature />} />
           <Route path="/download" element={<Download />} />
           <Route path="/about" element={<About />} />
@@ -32,6 +37,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <AdminUpload />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/genome-upload"
+            element={
+              <ProtectedRoute>
+                <AdminGenomeUpload />
               </ProtectedRoute>
             }
           />

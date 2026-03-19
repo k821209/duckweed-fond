@@ -4,6 +4,7 @@ import { LuLeaf, LuMenu, LuX } from 'react-icons/lu';
 
 const navItems = [
   { path: '/accessions', label: '품종' },
+  { path: '/genomics', label: '게놈 브라우저' },
   { path: '/map', label: '지도' },
   { path: '/literature', label: '연구현황' },
   { path: '/download', label: '다운로드' },
