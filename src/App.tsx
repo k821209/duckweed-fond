@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -31,6 +31,7 @@ function App() {
           <Route path="/literature" element={<Literature />} />
           <Route path="/download" element={<Download />} />
           <Route path="/about" element={<About />} />
+          <Route path="/admin" element={<Navigate to="/admin/manage" replace />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route
             path="/admin/upload"

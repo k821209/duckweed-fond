@@ -9,7 +9,7 @@ interface FileRow {
   file: GenomicFile;
 }
 
-const fileTypeTabs = ['전체', 'FASTA', 'VCF', 'GFF', 'BAM'] as const;
+const fileTypeTabs = ['All', 'FASTA', 'VCF', 'GFF', 'BAM'] as const;
 
 function formatSize(bytes: number): string {
   if (bytes >= 1_000_000_000) return `${(bytes / 1_000_000_000).toFixed(1)} GB`;
@@ -19,7 +19,7 @@ function formatSize(bytes: number): string {
 }
 
 export default function Download() {
-  const [activeTab, setActiveTab] = useState<string>('전체');
+  const [activeTab, setActiveTab] = useState<string>('All');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -37,7 +37,7 @@ export default function Download() {
 
   const filtered = useMemo(() => {
     let list = allFiles;
-    if (activeTab !== '전체') {
+    if (activeTab !== 'All') {
       const ft = activeTab.toLowerCase();
       list = list.filter((r) => r.file.fileType === ft);
     }
@@ -76,15 +76,15 @@ export default function Download() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">데이터 다운로드</h1>
-      <p className="text-gray-500 text-sm mb-6">유전체 데이터 파일을 검색하고 다운로드하세요</p>
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">Data Download</h1>
+      <p className="text-gray-500 text-sm mb-6">Search and download genomic data files</p>
 
       {/* Search */}
       <div className="relative mb-4">
         <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
           type="text"
-          placeholder="파일명 또는 품종명 검색..."
+          placeholder="Search by file name or accession..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500 focus:border-transparent"
@@ -122,11 +122,11 @@ export default function Download() {
                     className="rounded border-gray-300 text-duckweed-600 focus:ring-duckweed-500"
                   />
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">파일명</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">품종</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">형식</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">크기</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">날짜</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">File Name</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">Accession</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-600">Format</th>
+                <th className="px-4 py-3 text-right font-medium text-gray-600">Size</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-600">Date</th>
                 <th className="px-4 py-3 text-center font-medium text-gray-600"></th>
               </tr>
             </thead>
@@ -159,7 +159,7 @@ export default function Download() {
                       {formatSize(row.file.fileSize)}
                     </td>
                     <td className="px-4 py-3 text-center text-gray-500 text-xs">
-                      {row.file.uploadedAt.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}
+                      {row.file.uploadedAt.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <button className="text-duckweed-600 hover:text-duckweed-700 transition-colors">
@@ -172,7 +172,7 @@ export default function Download() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
-                    검색 결과가 없습니다.
+                    No results found.
                   </td>
                 </tr>
               )}
@@ -185,11 +185,11 @@ export default function Download() {
       {selected.size > 0 && (
         <div className="mt-4 flex items-center justify-between bg-duckweed-50 border border-duckweed-200 rounded-xl px-6 py-4">
           <p className="text-sm text-duckweed-800">
-            <span className="font-semibold">{selected.size}건</span> 선택됨 (총 {formatSize(selectedSize)})
+            <span className="font-semibold">{selected.size}</span> selected (total {formatSize(selectedSize)})
           </p>
           <button className="flex items-center gap-2 bg-duckweed-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-duckweed-700 transition-colors">
             <LuDownload />
-            선택 다운로드
+            Download Selected
           </button>
         </div>
       )}

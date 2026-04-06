@@ -19,7 +19,7 @@ const columnHelper = createColumnHelper<Accession>();
 
 const columns = [
   columnHelper.accessor('name_kr', {
-    header: '이름',
+    header: 'Name',
     cell: (info) => (
       <div>
         <p className="font-medium text-gray-900">{info.getValue()}</p>
@@ -28,22 +28,22 @@ const columns = [
     ),
   }),
   columnHelper.accessor('species', {
-    header: '종명',
+    header: 'Species',
     cell: (info) => <span className="italic text-gray-600">{info.getValue()}</span>,
   }),
   columnHelper.accessor('origin', {
-    header: '수집지',
+    header: 'Origin',
     cell: (info) => <span className="text-gray-600">{info.getValue()}</span>,
   }),
   columnHelper.accessor('genomicFiles', {
-    header: '파일',
-    cell: (info) => <span className="text-gray-600">{info.getValue().length}개</span>,
+    header: 'Files',
+    cell: (info) => <span className="text-gray-600">{info.getValue().length}</span>,
     enableSorting: false,
   }),
   columnHelper.accessor('createdAt', {
-    header: '등록일',
+    header: 'Date',
     cell: (info) =>
-      info.getValue().toLocaleDateString('ko-KR', {
+      info.getValue().toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
@@ -101,7 +101,7 @@ export default function Accessions() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">품종/계통 목록</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Accession List</h1>
 
       {/* Filters */}
       <div className="mb-6 space-y-3">
@@ -110,7 +110,7 @@ export default function Accessions() {
             <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="이름, 종명, 수집지 검색..."
+              placeholder="Search..."
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-duckweed-300 text-sm"
@@ -124,7 +124,7 @@ export default function Accessions() {
               onChange={(e) => setSpeciesFilter(e.target.value)}
               className="px-3 py-2.5 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-300"
             >
-              <option value="">종 전체</option>
+              <option value="">All Species</option>
               {speciesList.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -136,7 +136,7 @@ export default function Accessions() {
               onChange={(e) => setOriginFilter(e.target.value)}
               className="px-3 py-2.5 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-300"
             >
-              <option value="">수집지 전체</option>
+              <option value="">All Origins</option>
               {originList.map((o) => (
                 <option key={o} value={o}>
                   {o}
@@ -148,7 +148,7 @@ export default function Accessions() {
                 onClick={resetFilters}
                 className="px-3 py-2.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg bg-white flex items-center gap-1"
               >
-                <LuX className="text-xs" /> 초기화
+                <LuX className="text-xs" /> Reset
               </button>
             )}
           </div>
@@ -158,7 +158,7 @@ export default function Accessions() {
             className="sm:hidden px-3 py-2.5 border border-gray-200 rounded-lg bg-white text-sm flex items-center gap-1"
             onClick={() => setShowFilters(!showFilters)}
           >
-            <LuFilter /> 필터
+            <LuFilter /> Filter
           </button>
         </div>
 
@@ -170,7 +170,7 @@ export default function Accessions() {
               onChange={(e) => setSpeciesFilter(e.target.value)}
               className="px-3 py-2.5 border border-gray-200 rounded-lg bg-white text-sm"
             >
-              <option value="">종 전체</option>
+              <option value="">All Species</option>
               {speciesList.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -182,7 +182,7 @@ export default function Accessions() {
               onChange={(e) => setOriginFilter(e.target.value)}
               className="px-3 py-2.5 border border-gray-200 rounded-lg bg-white text-sm"
             >
-              <option value="">수집지 전체</option>
+              <option value="">All Origins</option>
               {originList.map((o) => (
                 <option key={o} value={o}>
                   {o}
@@ -191,7 +191,7 @@ export default function Accessions() {
             </select>
             {(speciesFilter || originFilter || globalFilter) && (
               <button onClick={resetFilters} className="text-sm text-gray-500 hover:text-gray-700">
-                초기화
+                Reset
               </button>
             )}
           </div>
@@ -286,12 +286,12 @@ export default function Accessions() {
             {/* Pagination */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
               <span>
-                {table.getFilteredRowModel().rows.length}건 중{' '}
                 {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-
                 {Math.min(
                   (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
                   table.getFilteredRowModel().rows.length,
-                )}
+                )}{' '}
+                of {table.getFilteredRowModel().rows.length}
               </span>
               <div className="flex gap-2">
                 <button
@@ -299,14 +299,14 @@ export default function Accessions() {
                   disabled={!table.getCanPreviousPage()}
                   className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  이전
+                  Prev
                 </button>
                 <button
                   onClick={() => table.nextPage()}
                   disabled={!table.getCanNextPage()}
                   className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  다음
+                  Next
                 </button>
               </div>
             </div>

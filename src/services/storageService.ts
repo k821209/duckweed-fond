@@ -4,7 +4,8 @@ import {
   deleteObject,
   getDownloadURL,
 } from 'firebase/storage';
-import { storage } from './firebase';
+import { httpsCallable } from 'firebase/functions';
+import { storage, functions } from './firebase';
 
 export async function uploadFile(
   path: string,
@@ -70,4 +71,14 @@ export async function uploadGenomeBrowserFile(
 ): Promise<string> {
   const path = `genome-browser/${species}/raw/${file.name}`;
   return uploadFile(path, file, onProgress);
+}
+
+/**
+ * 게놈 브라우저 파일 재인덱싱 요청
+ * Cloud Function (reindex_genome)을 호출하여 기존 raw 파일을 재처리
+ */
+export async function reindexGenome(species: string): Promise<{ success: boolean; processed: string[] }> {
+  const reindex = httpsCallable<{ species: string }, { success: boolean; processed: string[] }>(functions, 'reindex_genome');
+  const result = await reindex({ species });
+  return result.data;
 }

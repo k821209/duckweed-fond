@@ -90,7 +90,7 @@ export default function AdminUpload() {
     e.preventDefault();
 
     if (!form.name_kr) {
-      toast.error('한글명을 입력해주세요.');
+      toast.error('Please enter a Korean name.');
       return;
     }
 
@@ -100,7 +100,7 @@ export default function AdminUpload() {
       // 1. Upload image
       let imageUrl = '';
       if (images.length > 0) {
-        setProgress('이미지 업로드 중...');
+        setProgress('Uploading image...');
         imageUrl = await uploadImage(images[0]);
       }
 
@@ -109,7 +109,7 @@ export default function AdminUpload() {
       for (let i = 0; i < genomicFiles.length; i++) {
         const file = genomicFiles[i];
         const fileType = getFileType(file.name);
-        setProgress(`유전체 파일 업로드 중... (${i + 1}/${genomicFiles.length})`);
+        setProgress(`Uploading genomic file... (${i + 1}/${genomicFiles.length})`);
         const storageUrl = await uploadGenomicFile(file, fileType);
         uploadedGenomicFiles.push({
           fileName: file.name,
@@ -121,7 +121,7 @@ export default function AdminUpload() {
       }
 
       // 3. Create Firestore document
-      setProgress('데이터 저장 중...');
+      setProgress('Saving data...');
       await createAccession({
         name_kr: form.name_kr,
         name_en: form.name_en,
@@ -129,18 +129,18 @@ export default function AdminUpload() {
         genus: form.genus as typeof genusOptions[number],
         origin: form.origin,
         location: form.lat && form.lng
-          ? { lat: parseFloat(form.lat), lng: parseFloat(form.lng), address: form.address || undefined }
+          ? { lat: parseFloat(form.lat), lng: parseFloat(form.lng), ...(form.address ? { address: form.address } : {}) }
           : null,
         description: form.description,
         imageUrl,
         genomicFiles: uploadedGenomicFiles,
       });
 
-      toast.success('품종이 성공적으로 등록되었습니다!');
+      toast.success('Accession registered successfully!');
       navigate('/admin/manage');
     } catch (err) {
       console.error('Upload error:', err);
-      toast.error('업로드 중 오류가 발생했습니다.');
+      toast.error('An error occurred during upload.');
     } finally {
       setUploading(false);
       setProgress('');
@@ -149,18 +149,18 @@ export default function AdminUpload() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">데이터 업로드</h1>
-      <p className="text-gray-500 text-sm mb-6">새로운 개구리밥 품종 정보를 등록합니다</p>
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">Data Upload</h1>
+      <p className="text-gray-500 text-sm mb-6">Register new duckweed accession data</p>
 
       <form onSubmit={handleSubmit}>
         <div className="grid lg:grid-cols-2 gap-6 mb-8">
           {/* Left: Metadata Form */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">품종 정보</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Accession Info</h2>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">한글명</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Korean Name</label>
                   <input
                     name="name_kr"
                     value={form.name_kr}
@@ -170,7 +170,7 @@ export default function AdminUpload() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">영문명</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">English Name</label>
                   <input
                     name="name_en"
                     value={form.name_en}
@@ -182,7 +182,7 @@ export default function AdminUpload() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">속명(Genus)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Genus</label>
                   <select
                     name="genus"
                     value={form.genus}
@@ -197,19 +197,19 @@ export default function AdminUpload() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">종명(Species)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Species</label>
                   <input
                     name="species"
                     value={form.species}
                     onChange={handleChange}
-                    placeholder="예: Lemna minor"
+
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">수집지</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Origin</label>
                 <input
                   name="origin"
                   value={form.origin}
@@ -220,27 +220,27 @@ export default function AdminUpload() {
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">위도</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
                   <input
                     name="lat"
                     value={form.lat}
                     onChange={handleChange}
-                    placeholder="37.2636"
+
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">경도</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
                   <input
                     name="lng"
                     value={form.lng}
                     onChange={handleChange}
-                    placeholder="127.0286"
+
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">주소</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
                   <input
                     name="address"
                     value={form.address}
@@ -251,7 +251,7 @@ export default function AdminUpload() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
                   name="description"
                   value={form.description}
@@ -265,8 +265,8 @@ export default function AdminUpload() {
 
           {/* Right: Map */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">수집 위치</h2>
-            <p className="text-xs text-gray-500 mb-4">지도를 클릭하면 좌표가 자동 입력됩니다</p>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Collection Location</h2>
+            <p className="text-xs text-gray-500 mb-4">Click on the map to auto-fill coordinates</p>
             <div className="h-80 lg:h-[400px] rounded-lg overflow-hidden border border-gray-200">
               <MapContainer center={[36.0, 127.5]} zoom={7} className="h-full w-full">
                 <TileLayer
@@ -286,7 +286,7 @@ export default function AdminUpload() {
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           {/* Image Upload */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">품종 이미지</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Accession Image</h2>
             <div
               {...imageDropzone.getRootProps()}
               className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
@@ -297,8 +297,8 @@ export default function AdminUpload() {
             >
               <input {...imageDropzone.getInputProps()} />
               <LuImage className="text-3xl text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-600">이미지 파일을 드래그하거나 클릭하여 선택</p>
-              <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP (최대 5MB)</p>
+              <p className="text-sm text-gray-600">Drag and drop or click to select an image</p>
+              <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP (max 5MB)</p>
             </div>
             {images.length > 0 && (
               <div className="mt-3 space-y-2">
@@ -320,7 +320,7 @@ export default function AdminUpload() {
 
           {/* Genomic File Upload */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">유전체 파일</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Genomic Files</h2>
             <div
               {...genomicDropzone.getRootProps()}
               className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
@@ -331,7 +331,7 @@ export default function AdminUpload() {
             >
               <input {...genomicDropzone.getInputProps()} />
               <LuFileText className="text-3xl text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-600">유전체 파일을 드래그하거나 클릭하여 선택</p>
+              <p className="text-sm text-gray-600">Drag and drop or click to select genomic files</p>
               <p className="text-xs text-gray-400 mt-1">FASTA, VCF, GFF3, BAM</p>
             </div>
             {genomicFiles.length > 0 && (
@@ -369,7 +369,7 @@ export default function AdminUpload() {
             className="flex items-center gap-2 bg-duckweed-600 text-white px-8 py-3 rounded-lg text-sm font-medium hover:bg-duckweed-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <LuUpload />
-            {uploading ? '업로드 중...' : '등록하기'}
+            {uploading ? 'Uploading...' : 'Submit'}
           </button>
         </div>
       </form>

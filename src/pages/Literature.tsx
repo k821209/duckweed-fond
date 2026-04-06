@@ -7,9 +7,9 @@ import { publications, externalDatabases } from '../data/publications';
 type TabId = 'species' | 'papers' | 'databases';
 
 const tabs: { id: TabId; label: string }[] = [
-  { id: 'species', label: '종별 유전체 정보' },
-  { id: 'papers', label: '주요 논문' },
-  { id: 'databases', label: '외부 DB' },
+  { id: 'species', label: 'Species Genomic Info' },
+  { id: 'papers', label: 'Key Publications' },
+  { id: 'databases', label: 'External DBs' },
 ];
 
 export default function Literature() {
@@ -30,8 +30,8 @@ export default function Literature() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">개구리밥 유전체 연구 현황</h1>
-      <p className="text-gray-500 text-sm mb-6">5속 36종의 유전체 정보, 주요 논문, 외부 데이터베이스</p>
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">Duckweed Genomics Research Overview</h1>
+      <p className="text-gray-500 text-sm mb-6">Genomic information for 5 genera and 36 species, key publications, and external databases</p>
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
@@ -58,11 +58,11 @@ export default function Literature() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">속(Genus)</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">종(Species)</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600">Genus</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600">Species</th>
                     <th className="text-center px-4 py-3 font-medium text-gray-600">2n</th>
-                    <th className="text-right px-4 py-3 font-medium text-gray-600">게놈 크기 (Mb)</th>
-                    <th className="text-center px-4 py-3 font-medium text-gray-600">서열화</th>
+                    <th className="text-right px-4 py-3 font-medium text-gray-600">Genome Size (Mb)</th>
+                    <th className="text-center px-4 py-3 font-medium text-gray-600">Sequenced</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -96,14 +96,14 @@ export default function Literature() {
 
           {/* Bar Chart */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">속별 평균 게놈 크기 비교</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Average Genome Size by Genus</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 30 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" label={{ value: 'Mb', position: 'insideBottomRight', offset: -5 }} />
                 <YAxis type="category" dataKey="genus" width={90} tick={{ fontStyle: 'italic', fontSize: 13 }} />
                 <Tooltip
-                  formatter={(value) => [`${Number(value).toLocaleString()} Mb`, '평균 게놈 크기']}
+                  formatter={(value) => [`${Number(value).toLocaleString()} Mb`, 'Avg. Genome Size']}
                   contentStyle={{ borderRadius: '8px', fontSize: '13px' }}
                 />
                 <Bar dataKey="avg" radius={[0, 6, 6, 0]}>
@@ -186,7 +186,7 @@ export default function Literature() {
               <p className="text-sm text-gray-500">{db.description}</p>
               <div className="flex items-center gap-1 mt-3 text-xs text-duckweed-600 font-medium">
                 <LuExternalLink className="text-xs" />
-                방문하기
+                Visit
               </div>
             </a>
           ))}

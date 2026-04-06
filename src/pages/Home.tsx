@@ -32,7 +32,7 @@ export default function Home() {
             Duckweed Genomics Database
           </h1>
           <p className="text-lg sm:text-xl text-duckweed-100 mb-8 max-w-2xl mx-auto">
-            개구리밥 유전체 정보 공유 플랫폼
+            Duckweed genomic information sharing platform
           </p>
 
           <form onSubmit={handleSearch} className="max-w-xl mx-auto flex gap-2">
@@ -40,7 +40,7 @@ export default function Home() {
               <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="품종명, 종명, 수집지로 검색..."
+                placeholder="Search by accession, species, or origin..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-lg text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-duckweed-300"
@@ -50,7 +50,7 @@ export default function Home() {
               type="submit"
               className="px-6 py-3 bg-duckweed-500 hover:bg-duckweed-400 text-white font-medium rounded-lg transition-colors"
             >
-              검색
+              Search
             </button>
           </form>
         </div>
@@ -59,18 +59,18 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
         {/* Stats */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={<LuLeaf />} value={accessions.length} label="등록 품종" />
-          <StatCard icon={<LuFlaskConical />} value={speciesSet.size} label="종 (Species)" />
-          <StatCard icon={<LuMapPin />} value={accessions.filter((a) => a.location).length} label="수집지" />
-          <StatCard icon={<LuFileText />} value={fileCount} label="유전체 파일" />
+          <StatCard icon={<LuLeaf />} value={accessions.length} label="Accessions" />
+          <StatCard icon={<LuFlaskConical />} value={speciesSet.size} label="Species" />
+          <StatCard icon={<LuMapPin />} value={accessions.filter((a) => a.location).length} label="Collection Sites" />
+          <StatCard icon={<LuFileText />} value={fileCount} label="Genomic Files" />
         </section>
 
         {/* Recent Accessions */}
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">최근 등록 품종</h2>
+            <h2 className="text-xl font-bold text-gray-900">Recently Added Accessions</h2>
             <Link to="/accessions" className="text-sm text-duckweed-600 hover:underline">
-              전체보기 →
+              View all →
             </Link>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -78,11 +78,11 @@ export default function Home() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 text-gray-600">
                   <tr>
-                    <th className="text-left px-4 py-3 font-medium">이름</th>
-                    <th className="text-left px-4 py-3 font-medium">종명</th>
-                    <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">수집지</th>
-                    <th className="text-left px-4 py-3 font-medium hidden md:table-cell">파일</th>
-                    <th className="text-left px-4 py-3 font-medium">등록일</th>
+                    <th className="text-left px-4 py-3 font-medium">Name</th>
+                    <th className="text-left px-4 py-3 font-medium">Species</th>
+                    <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Origin</th>
+                    <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Files</th>
+                    <th className="text-left px-4 py-3 font-medium">Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -101,10 +101,10 @@ export default function Home() {
                       <td className="px-4 py-3 text-gray-600 italic">{acc.species}</td>
                       <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{acc.origin}</td>
                       <td className="px-4 py-3 text-gray-600 hidden md:table-cell">
-                        {acc.genomicFiles.length}개
+                        {acc.genomicFiles.length}
                       </td>
                       <td className="px-4 py-3 text-gray-500">
-                        {acc.createdAt.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                        {acc.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </td>
                     </tr>
                   ))}
@@ -117,9 +117,9 @@ export default function Home() {
         {/* Map Preview */}
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">수집지 미리보기</h2>
+            <h2 className="text-xl font-bold text-gray-900">Collection Sites Preview</h2>
             <Link to="/map" className="text-sm text-duckweed-600 hover:underline">
-              전체 지도 →
+              Full map →
             </Link>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-2">

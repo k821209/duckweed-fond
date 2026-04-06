@@ -2,8 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Link } from 'react-router-dom';
 import L from 'leaflet';
-import { LuFilter, LuX, LuMapPin } from 'react-icons/lu';
-import { dummyAccessions } from '../data/dummyAccessions';
+import { LuFilter, LuX, LuMapPin, LuLoader } from 'react-icons/lu';
+import { getAccessions } from '../services/accessionService';
 import type { Accession } from '../types/accession';
 import 'leaflet/dist/leaflet.css';
 
@@ -35,12 +35,21 @@ function FitBounds({ accessions }: { accessions: Accession[] }) {
 }
 
 export default function MapPage() {
+  const [accessions, setAccessions] = useState<Accession[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedGenera, setSelectedGenera] = useState<Set<string>>(new Set(genusList));
   const [sideOpen, setSideOpen] = useState(true);
 
+  useEffect(() => {
+    getAccessions()
+      .then(setAccessions)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
   const filtered = useMemo(
-    () => dummyAccessions.filter((a) => selectedGenera.has(a.genus) && a.location),
-    [selectedGenera],
+    () => accessions.filter((a) => selectedGenera.has(a.genus) && a.location),
+    [selectedGenera, accessions],
   );
 
   const toggleGenus = (g: string) => {
@@ -70,7 +79,7 @@ export default function MapPage() {
         w-72 md:w-80 h-full bg-white border-r border-gray-200 flex flex-col`}
       >
         <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-bold text-gray-900 mb-3">필터</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-3">Filter</h2>
           <div className="space-y-2">
             {genusList.map((g) => (
               <label key={g} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
@@ -84,26 +93,34 @@ export default function MapPage() {
               </label>
             ))}
           </div>
-          <p className="mt-3 text-xs text-gray-500">검색 결과: {filtered.length}건</p>
+          <p className="mt-3 text-xs text-gray-500">{filtered.length} results</p>
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {filtered.map((acc) => (
-            <Link
-              key={acc.id}
-              to={`/accessions/${acc.id}`}
-              className="block p-4 border-b border-gray-100 hover:bg-duckweed-50 transition-colors"
-            >
-              <p className="font-medium text-gray-900">{acc.name_kr}</p>
-              <p className="text-xs text-gray-500 italic">{acc.species}</p>
-              <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
-                <LuMapPin className="text-xs" />
-                {acc.origin}
-              </div>
-            </Link>
-          ))}
-          {filtered.length === 0 && (
-            <p className="p-4 text-sm text-gray-400 text-center">조건에 맞는 품종이 없습니다.</p>
+          {loading ? (
+            <div className="p-4 text-center text-gray-400">
+              <LuLoader className="animate-spin inline-block mr-1" /> Loading...
+            </div>
+          ) : (
+            <>
+              {filtered.map((acc) => (
+                <Link
+                  key={acc.id}
+                  to={`/accessions/${acc.id}`}
+                  className="block p-4 border-b border-gray-100 hover:bg-duckweed-50 transition-colors"
+                >
+                  <p className="font-medium text-gray-900">{acc.name_en || acc.name_kr}</p>
+                  <p className="text-xs text-gray-500 italic">{acc.species}</p>
+                  <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
+                    <LuMapPin className="text-xs" />
+                    {acc.origin}
+                  </div>
+                </Link>
+              ))}
+              {filtered.length === 0 && (
+                <p className="p-4 text-sm text-gray-400 text-center">No accessions found.</p>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -126,14 +143,14 @@ export default function MapPage() {
               <Marker key={acc.id} position={[acc.location.lat, acc.location.lng]}>
                 <Popup>
                   <div className="min-w-[160px]">
-                    <p className="font-bold text-sm">{acc.name_kr}</p>
+                    <p className="font-bold text-sm">{acc.name_en || acc.name_kr}</p>
                     <p className="text-xs italic text-gray-500">{acc.species}</p>
                     <p className="text-xs text-gray-400 mt-1">{acc.origin}</p>
                     <Link
                       to={`/accessions/${acc.id}`}
                       className="mt-2 inline-block text-xs text-duckweed-600 hover:underline font-medium"
                     >
-                      상세보기 &rarr;
+                      Details &rarr;
                     </Link>
                   </div>
                 </Popup>

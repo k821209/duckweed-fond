@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LuLeaf, LuMenu, LuX } from 'react-icons/lu';
+import { LuLeaf, LuMenu, LuX, LuSettings } from 'react-icons/lu';
+import { useAuth } from '../hooks/useAuth';
 
 const navItems = [
-  { path: '/accessions', label: '품종' },
-  { path: '/genomics', label: '게놈 브라우저' },
-  { path: '/map', label: '지도' },
-  { path: '/literature', label: '연구현황' },
-  { path: '/download', label: '다운로드' },
+  { path: '/accessions', label: 'Accessions' },
+  { path: '/genomics', label: 'Genome Browser' },
+  { path: '/map', label: 'Map' },
+  { path: '/literature', label: 'Literature' },
+  { path: '/download', label: 'Download' },
   { path: '/about', label: 'About' },
 ];
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -38,6 +40,19 @@ export default function Header() {
                 {item.label}
               </Link>
             ))}
+            {isAuthenticated && (
+              <Link
+                to="/admin/manage"
+                className={`text-sm font-medium transition-colors flex items-center gap-1 ${
+                  location.pathname.startsWith('/admin')
+                    ? 'text-duckweed-600'
+                    : 'text-gray-600 hover:text-duckweed-600'
+                }`}
+              >
+                <LuSettings className="text-xs" />
+                Admin
+              </Link>
+            )}
           </nav>
 
           <button
@@ -65,6 +80,19 @@ export default function Header() {
               {item.label}
             </Link>
           ))}
+          {isAuthenticated && (
+            <Link
+              to="/admin/manage"
+              className={`block px-4 py-3 text-sm font-medium ${
+                location.pathname.startsWith('/admin')
+                  ? 'text-duckweed-600 bg-duckweed-50'
+                  : 'text-gray-600'
+              }`}
+              onClick={() => setMobileOpen(false)}
+            >
+              Admin
+            </Link>
+          )}
         </div>
       )}
     </header>

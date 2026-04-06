@@ -1,13 +1,28 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 import { LuDna, LuUpload, LuX, LuFileText, LuLoader, LuCheck } from 'react-icons/lu';
 import { uploadGenomeBrowserFile } from '../../services/storageService';
-import { genomeBrowserConfigs } from '../../data/genomeBrowserConfigs';
+import { getGenomes, upsertGenome, type GenomeConfig } from '../../services/genomeService';
 
 export default function AdminGenomeUpload() {
-  const [species, setSpecies] = useState(genomeBrowserConfigs[0].species);
-  const [customSpecies, setCustomSpecies] = useState('');
+  const [genomes, setGenomes] = useState<GenomeConfig[]>([]);
+  const [selectedId, setSelectedId] = useState('__new__');
+  const [form, setForm] = useState({
+    speciesSlug: '',
+    displayName: '',
+    genus: 'Lemna',
+    genomeSizeMb: 0,
+    geneCount: '' as string,
+    chromosomeCount: 0,
+    description: '',
+    reference: '',
+    journal: '',
+    ncbiAccession: '',
+    ncbiUrl: '',
+    doiUrl: '',
+    defaultLocation: '',
+  });
   const [fastaFile, setFastaFile] = useState<File | null>(null);
   const [gffFile, setGffFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -15,7 +30,37 @@ export default function AdminGenomeUpload() {
   const [currentFile, setCurrentFile] = useState('');
   const [completed, setCompleted] = useState<string[]>([]);
 
-  const targetSpecies = species === '__custom__' ? customSpecies : species;
+  useEffect(() => {
+    getGenomes().then(setGenomes).catch(console.error);
+  }, []);
+
+  const handleSelectExisting = (id: string) => {
+    setSelectedId(id);
+    if (id === '__new__') {
+      setForm({ speciesSlug: '', displayName: '', genus: 'Lemna', genomeSizeMb: 0, geneCount: '', chromosomeCount: 0, description: '', reference: '', journal: '', ncbiAccession: '', ncbiUrl: '', doiUrl: '', defaultLocation: '' });
+      return;
+    }
+    const g = genomes.find((x) => x.id === id);
+    if (g) {
+      setForm({
+        speciesSlug: g.id,
+        displayName: g.displayName,
+        genus: g.genus,
+        genomeSizeMb: g.genomeSizeMb,
+        geneCount: g.geneCount?.toString() ?? '',
+        chromosomeCount: g.chromosomeCount,
+        description: g.description,
+        reference: g.reference,
+        journal: g.journal,
+        ncbiAccession: g.ncbiAccession,
+        ncbiUrl: g.ncbiUrl,
+        doiUrl: g.doiUrl,
+        defaultLocation: g.defaultLocation,
+      });
+    }
+  };
+
+  const speciesSlug = selectedId === '__new__' ? form.speciesSlug : selectedId;
 
   const fastaDropzone = useDropzone({
     accept: { 'application/octet-stream': ['.fa', '.fasta', '.fna'] },
@@ -33,13 +78,22 @@ export default function AdminGenomeUpload() {
     }, []),
   });
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
   const handleUpload = async () => {
-    if (!targetSpecies) {
-      toast.error('종 식별자를 입력해주세요.');
+    if (!speciesSlug) {
+      toast.error('Please enter a species slug.');
+      return;
+    }
+    if (!form.displayName) {
+      toast.error('Please enter a display name.');
       return;
     }
     if (!fastaFile && !gffFile) {
-      toast.error('최소 하나의 파일을 선택해주세요.');
+      toast.error('Please select at least one file.');
       return;
     }
 
@@ -48,27 +102,44 @@ export default function AdminGenomeUpload() {
 
     try {
       if (fastaFile) {
-        setCurrentFile(`FASTA 업로드 중: ${fastaFile.name}`);
+        setCurrentFile(`Uploading FASTA: ${fastaFile.name}`);
         setPercent(0);
-        await uploadGenomeBrowserFile(fastaFile, targetSpecies, (p) => setPercent(Math.round(p)));
+        await uploadGenomeBrowserFile(fastaFile, speciesSlug, (p) => setPercent(Math.round(p)));
         setCompleted((prev) => [...prev, `FASTA: ${fastaFile.name}`]);
       }
 
       if (gffFile) {
-        setCurrentFile(`GFF3 업로드 중: ${gffFile.name}`);
+        setCurrentFile(`Uploading GFF3: ${gffFile.name}`);
         setPercent(0);
-        await uploadGenomeBrowserFile(gffFile, targetSpecies, (p) => setPercent(Math.round(p)));
+        await uploadGenomeBrowserFile(gffFile, speciesSlug, (p) => setPercent(Math.round(p)));
         setCompleted((prev) => [...prev, `GFF3: ${gffFile.name}`]);
       }
 
+      // Upsert to Firestore genomes collection
+      await upsertGenome(speciesSlug, {
+        displayName: form.displayName,
+        genus: form.genus,
+        genomeSizeMb: Number(form.genomeSizeMb) || 0,
+        geneCount: form.geneCount ? Number(form.geneCount) : null,
+        chromosomeCount: Number(form.chromosomeCount) || 0,
+        description: form.description,
+        reference: form.reference,
+        journal: form.journal,
+        ncbiAccession: form.ncbiAccession,
+        ncbiUrl: form.ncbiUrl,
+        doiUrl: form.doiUrl,
+        defaultLocation: form.defaultLocation,
+        indexed: false,
+      });
+
       setCurrentFile('');
       toast.success(
-        '업로드 완료! Cloud Function이 자동으로 인덱싱을 시작합니다. 처리에 수 분이 걸릴 수 있습니다.',
+        'Upload complete! Cloud Function will automatically start indexing.',
         { duration: 6000 },
       );
     } catch (err) {
       console.error('Upload error:', err);
-      toast.error('업로드 중 오류가 발생했습니다.');
+      toast.error('An error occurred during upload.');
     } finally {
       setUploading(false);
       setCurrentFile('');
@@ -79,47 +150,102 @@ export default function AdminGenomeUpload() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
         <LuDna className="text-duckweed-600" />
-        게놈 브라우저 데이터 업로드
+        Genome Browser Data Upload
       </h1>
       <p className="text-gray-500 text-sm mb-8">
-        FASTA / GFF3 파일을 업로드하면 Cloud Function이 자동으로 bgzip 압축, faidx/tabix 인덱싱을 수행합니다.
+        Upload FASTA / GFF3 files. Cloud Function will automatically perform bgzip compression and faidx/tabix indexing.
       </p>
 
-      {/* Species Selection */}
+      {/* Existing genome selector */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">종 선택</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Genome</h2>
+        <select
+          value={selectedId}
+          onChange={(e) => handleSelectExisting(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500 mb-4"
+        >
+          <option value="__new__">+ Register New Genome</option>
+          {genomes.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.displayName} ({g.id})
+            </option>
+          ))}
+        </select>
+
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">종</label>
-            <select
-              value={species}
-              onChange={(e) => setSpecies(e.target.value)}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Species Slug</label>
+            <input
+              name="speciesSlug"
+              value={speciesSlug}
+              onChange={handleChange}
+              disabled={selectedId !== '__new__'}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500 disabled:bg-gray-100"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+            <input
+              name="displayName"
+              value={form.displayName}
+              onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500"
-            >
-              {genomeBrowserConfigs.map((c) => (
-                <option key={c.species} value={c.species}>
-                  {c.displayName}
-                </option>
+            />
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-3 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Genus</label>
+            <select name="genus" value={form.genus} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500">
+              {['Spirodela', 'Landoltia', 'Lemna', 'Wolffiella', 'Wolffia'].map((g) => (
+                <option key={g} value={g}>{g}</option>
               ))}
-              <option value="__custom__">직접 입력...</option>
             </select>
           </div>
-          {species === '__custom__' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                종 식별자 (영문, 하이픈)
-              </label>
-              <input
-                value={customSpecies}
-                onChange={(e) => setCustomSpecies(e.target.value)}
-                placeholder="예: lemna-gibba"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500"
-              />
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Genome Size (Mb)</label>
+            <input name="genomeSizeMb" type="number" value={form.genomeSizeMb} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Chromosome Count</label>
+            <input name="chromosomeCount" type="number" value={form.chromosomeCount} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500" />
+          </div>
         </div>
-        <p className="mt-2 text-xs text-gray-500">
-          업로드 경로: <code className="bg-gray-100 px-1 rounded">genome-browser/{targetSpecies || '...'}/raw/</code>
+
+        <div className="grid sm:grid-cols-3 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Gene Count</label>
+            <input name="geneCount" value={form.geneCount} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Default Location</label>
+            <input name="defaultLocation" value={form.defaultLocation} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">NCBI Accession</label>
+            <input name="ncbiAccession" value={form.ncbiAccession} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500" />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea name="description" value={form.description} onChange={handleChange} rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500 resize-none" />
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reference</label>
+            <input name="reference" value={form.reference} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Journal</label>
+            <input name="journal" value={form.journal} onChange={handleChange} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-duckweed-500" />
+          </div>
+        </div>
+
+        <p className="mt-3 text-xs text-gray-500">
+          Upload path: <code className="bg-gray-100 px-1 rounded">genome-browser/{speciesSlug || '...'}/raw/</code>
         </p>
       </div>
 
@@ -127,9 +253,9 @@ export default function AdminGenomeUpload() {
       <div className="grid md:grid-cols-2 gap-6 mb-8">
         {/* FASTA */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">게놈 서열 (FASTA)</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Genome Sequence (FASTA)</h2>
           <p className="text-xs text-gray-500 mb-4">
-            .fa 또는 .fasta 파일. bgzip + samtools faidx로 자동 인덱싱됩니다.
+            .fa or .fasta file. Automatically indexed with bgzip + samtools faidx.
           </p>
           <div
             {...fastaDropzone.getRootProps()}
@@ -141,7 +267,7 @@ export default function AdminGenomeUpload() {
           >
             <input {...fastaDropzone.getInputProps()} />
             <LuFileText className="text-3xl text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-600">FASTA 파일 선택</p>
+            <p className="text-sm text-gray-600">Select FASTA file</p>
             <p className="text-xs text-gray-400 mt-1">.fa, .fasta, .fna</p>
           </div>
           {fastaFile && (
@@ -149,11 +275,7 @@ export default function AdminGenomeUpload() {
               <span className="text-sm text-green-800 truncate">
                 {fastaFile.name} ({(fastaFile.size / 1024 / 1024).toFixed(1)} MB)
               </span>
-              <button
-                type="button"
-                onClick={() => setFastaFile(null)}
-                className="text-gray-400 hover:text-red-500"
-              >
+              <button type="button" onClick={() => setFastaFile(null)} className="text-gray-400 hover:text-red-500">
                 <LuX />
               </button>
             </div>
@@ -162,9 +284,9 @@ export default function AdminGenomeUpload() {
 
         {/* GFF3 */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">유전자 주석 (GFF3)</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Gene Annotation (GFF3)</h2>
           <p className="text-xs text-gray-500 mb-4">
-            .gff3 또는 .gff 파일. 정렬 + bgzip + tabix로 자동 인덱싱됩니다.
+            .gff3 or .gff file. Automatically sorted, compressed with bgzip, and indexed with tabix.
           </p>
           <div
             {...gffDropzone.getRootProps()}
@@ -176,7 +298,7 @@ export default function AdminGenomeUpload() {
           >
             <input {...gffDropzone.getInputProps()} />
             <LuFileText className="text-3xl text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-600">GFF3 파일 선택</p>
+            <p className="text-sm text-gray-600">Select GFF3 file</p>
             <p className="text-xs text-gray-400 mt-1">.gff3, .gff</p>
           </div>
           {gffFile && (
@@ -184,11 +306,7 @@ export default function AdminGenomeUpload() {
               <span className="text-sm text-green-800 truncate">
                 {gffFile.name} ({(gffFile.size / 1024 / 1024).toFixed(1)} MB)
               </span>
-              <button
-                type="button"
-                onClick={() => setGffFile(null)}
-                className="text-gray-400 hover:text-red-500"
-              >
+              <button type="button" onClick={() => setGffFile(null)} className="text-gray-400 hover:text-red-500">
                 <LuX />
               </button>
             </div>
@@ -215,7 +333,7 @@ export default function AdminGenomeUpload() {
 
       {completed.length > 0 && (
         <div className="mb-4 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
-          <p className="text-sm font-medium text-green-800 mb-1">업로드 완료:</p>
+          <p className="text-sm font-medium text-green-800 mb-1">Upload complete:</p>
           {completed.map((c, i) => (
             <div key={i} className="flex items-center gap-1 text-sm text-green-700">
               <LuCheck className="text-green-600" />
@@ -233,21 +351,8 @@ export default function AdminGenomeUpload() {
           className="flex items-center gap-2 bg-duckweed-600 text-white px-8 py-3 rounded-lg text-sm font-medium hover:bg-duckweed-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <LuUpload />
-          {uploading ? '업로드 중...' : '업로드 및 인덱싱 시작'}
+          {uploading ? 'Uploading...' : 'Upload & Start Indexing'}
         </button>
-      </div>
-
-      {/* Info */}
-      <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="text-sm font-semibold text-blue-800 mb-2">처리 과정</h3>
-        <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-          <li>파일이 <code className="bg-blue-100 px-1 rounded">genome-browser/{'{species}'}/raw/</code>에 업로드됩니다</li>
-          <li>Cloud Function이 자동으로 트리거되어 인덱싱을 시작합니다</li>
-          <li>FASTA → bgzip 압축 + samtools faidx (.fa.gz, .fai, .gzi)</li>
-          <li>GFF3 → 정렬 + bgzip 압축 + tabix 인덱싱 (.gff3.gz, .tbi)</li>
-          <li>처리된 파일이 <code className="bg-blue-100 px-1 rounded">genome-browser/{'{species}'}/</code>에 저장됩니다</li>
-          <li>게놈 브라우저 페이지에서 자동으로 사용 가능합니다</li>
-        </ol>
       </div>
     </div>
   );

@@ -7,5 +7,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth != null;
     }
+    // Genome browser configs
+    match /genomes/{genomeId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
   }
 }

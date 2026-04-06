@@ -1,17 +1,24 @@
 # TODO
 
-## 긴급
-- [ ] Admin 페이지 접속 불가 - Firestore 권한 오류 (`Missing or insufficient permissions`)
-  - firestore.rules 배포 완료했으나 여전히 안 됨
-  - 원인 조사 필요: Firestore 인덱스 미생성, Auth 상태, 또는 rules 문법 문제 가능성
-  - 현재 rules: accessions 컬렉션 공개 읽기 + 인증 쓰기
+## Done
+- [x] Admin page redirect (`/admin` → `/admin/manage`)
+- [x] Firestore undefined error fix (`address: undefined`)
+- [x] Cloud Function bgzip binary → pysam Python API
+- [x] Storage CORS configuration
+- [x] Genome upload progress bar
+- [x] AdminManage edit button (Firestore integration)
+- [x] JBrowse 2 genome browser
+- [x] Cloud Function genome indexing (pysam Python API)
+- [x] Cloud Function deploy & verify (Wolffia australiana indexed)
+- [x] Header Admin menu (auth-gated)
+- [x] Reindex HTTP callable function + AdminManage button
+- [x] genomeBrowserConfigs refactoring → Firestore `genomes` collection
+- [x] MapPage: dummy data → Firestore `getAccessions()`
+- [x] All UI text: Korean → English
+- [x] Remove all form placeholders
 
-## 진행 중
-- [x] 게놈 업로드 프로그레스 바 추가
-- [x] AdminManage 수정 버튼 (Firestore 연동)
-- [x] JBrowse 2 게놈 브라우저 구현
-- [x] Cloud Function 게놈 파일 인덱싱 (Python + pysam)
-
-## 다음 작업
-- [ ] 게놈 브라우저에 실제 데이터 업로드 테스트 (NCBI에서 좀개구리밥 파일 다운로드)
-- [ ] Cloud Function 배포 및 동작 확인
+## Next
+- [ ] **Accessions page uses dummy data** — Accessions list page and AccessionDetail still reference `dummyAccessions` instead of Firestore. Need to switch to `getAccessions()`/`getAccession()` so they match admin data. This also fixes the Map page "Accession not found" issue (detail page can't find Firestore IDs in dummy data).
+- [ ] **Admin edit modal: add map picker** — when editing an accession, include a Leaflet map to pick/update lat/lng (like AdminUpload already has)
+- [ ] Upload remaining species genome data (NCBI download)
+- [ ] Genome browser live test (Wolffia australiana)

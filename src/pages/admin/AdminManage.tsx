@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { LuPencil, LuTrash2, LuPlus, LuX, LuTriangleAlert, LuLoader, LuDna, LuSave } from 'react-icons/lu';
+import { LuPencil, LuTrash2, LuPlus, LuX, LuTriangleAlert, LuLoader, LuDna, LuSave, LuRefreshCw } from 'react-icons/lu';
 import { getAccessions, deleteAccession, updateAccession } from '../../services/accessionService';
+import { reindexGenome } from '../../services/storageService';
 import type { Accession } from '../../types/accession';
 import toast from 'react-hot-toast';
 
@@ -24,6 +25,7 @@ export default function AdminManage() {
     address: '',
   });
   const [saving, setSaving] = useState(false);
+  const [reindexingId, setReindexingId] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -32,7 +34,7 @@ export default function AdminManage() {
       setAccessions(data);
     } catch (err) {
       console.error(err);
-      toast.error('데이터 불러오기 실패');
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -46,10 +48,10 @@ export default function AdminManage() {
     try {
       await deleteAccession(id);
       setAccessions((prev) => prev.filter((a) => a.id !== id));
-      toast.success('삭제 완료');
+      toast.success('Deleted successfully');
     } catch (err) {
       console.error(err);
-      toast.error('삭제 실패');
+      toast.error('Failed to delete');
     }
     setDeleteTarget(null);
   };
@@ -85,17 +87,35 @@ export default function AdminManage() {
         origin: editForm.origin,
         description: editForm.description,
         location: editForm.lat && editForm.lng
-          ? { lat: parseFloat(editForm.lat), lng: parseFloat(editForm.lng), address: editForm.address || undefined }
+          ? { lat: parseFloat(editForm.lat), lng: parseFloat(editForm.lng), ...(editForm.address ? { address: editForm.address } : {}) }
           : null,
       });
-      toast.success('수정 완료');
+      toast.success('Updated successfully');
       setEditTarget(null);
       fetchData();
     } catch (err) {
       console.error(err);
-      toast.error('수정 실패');
+      toast.error('Failed to update');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleReindex = async (acc: Accession) => {
+    // Extract species slug from genomicFiles storageUrl, or generate from genus+species
+    const urlMatch = acc.genomicFiles[0]?.storageUrl?.match(/genome-browser\/([^/]+)\//);
+    const speciesSlug = urlMatch
+      ? urlMatch[1]
+      : `${acc.genus}-${acc.species}`.toLowerCase().replace(/\s+/g, '-');
+    setReindexingId(acc.id);
+    try {
+      const result = await reindexGenome(speciesSlug);
+      toast.success(`Reindexing complete: ${result.processed.join(', ')}`, { duration: 5000 });
+    } catch (err) {
+      console.error(err);
+      toast.error('Reindexing failed. Check the console log.');
+    } finally {
+      setReindexingId(null);
     }
   };
 
@@ -103,8 +123,8 @@ export default function AdminManage() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">데이터 관리</h1>
-          <p className="text-gray-500 text-sm mt-1">등록된 품종 정보를 관리합니다</p>
+          <h1 className="text-2xl font-bold text-gray-900">Data Management</h1>
+          <p className="text-gray-500 text-sm mt-1">Manage registered accession data</p>
         </div>
         <div className="flex gap-3">
           <Link
@@ -112,14 +132,14 @@ export default function AdminManage() {
             className="flex items-center gap-2 border border-duckweed-600 text-duckweed-600 px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-duckweed-50 transition-colors"
           >
             <LuDna />
-            게놈 업로드
+            Genome Upload
           </Link>
           <Link
             to="/admin/upload"
             className="flex items-center gap-2 bg-duckweed-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-duckweed-700 transition-colors"
           >
             <LuPlus />
-            새로 등록
+            New Entry
           </Link>
         </div>
       </div>
@@ -131,12 +151,12 @@ export default function AdminManage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">#</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">한글명</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">종명</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">수집지</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-600">파일</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-600">등록일</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-600">관리</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Korean Name</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Species</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Origin</th>
+                <th className="text-center px-4 py-3 font-medium text-gray-600">Files</th>
+                <th className="text-center px-4 py-3 font-medium text-gray-600">Date</th>
+                <th className="text-center px-4 py-3 font-medium text-gray-600">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -144,13 +164,13 @@ export default function AdminManage() {
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-gray-400">
                     <LuLoader className="animate-spin inline-block mr-2" />
-                    불러오는 중...
+                    Loading...
                   </td>
                 </tr>
               ) : accessions.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-gray-400">
-                    등록된 품종이 없습니다.
+                    No registered accessions.
                   </td>
                 </tr>
               ) : (
@@ -160,23 +180,33 @@ export default function AdminManage() {
                     <td className="px-4 py-3 font-medium text-gray-900">{acc.name_kr}</td>
                     <td className="px-4 py-3 italic text-gray-600">{acc.species}</td>
                     <td className="px-4 py-3 text-gray-600">{acc.origin}</td>
-                    <td className="px-4 py-3 text-center text-gray-500">{acc.genomicFiles.length}개</td>
+                    <td className="px-4 py-3 text-center text-gray-500">{acc.genomicFiles.length}</td>
                     <td className="px-4 py-3 text-center text-gray-500 text-xs">
-                      {acc.createdAt.toLocaleDateString('ko-KR')}
+                      {acc.createdAt.toLocaleDateString('en-US')}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
+                        {acc.genomicFiles.length > 0 && (
+                          <button
+                            onClick={() => handleReindex(acc)}
+                            disabled={reindexingId === acc.id}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
+                            title="Reindex"
+                          >
+                            <LuRefreshCw className={`text-base ${reindexingId === acc.id ? 'animate-spin' : ''}`} />
+                          </button>
+                        )}
                         <button
                           onClick={() => openEdit(acc)}
                           className="p-1.5 rounded-lg text-gray-400 hover:text-duckweed-600 hover:bg-duckweed-50 transition-colors"
-                          title="수정"
+                          title="Edit"
                         >
                           <LuPencil className="text-base" />
                         </button>
                         <button
                           onClick={() => setDeleteTarget(acc)}
                           className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                          title="삭제"
+                          title="Delete"
                         >
                           <LuTrash2 className="text-base" />
                         </button>
@@ -202,12 +232,12 @@ export default function AdminManage() {
               <LuX className="text-lg" />
             </button>
 
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">품종 수정</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Accession</h3>
 
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">한글명</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Korean Name</label>
                   <input
                     name="name_kr"
                     value={editForm.name_kr}
@@ -216,7 +246,7 @@ export default function AdminManage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">영문명</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">English Name</label>
                   <input
                     name="name_en"
                     value={editForm.name_en}
@@ -228,7 +258,7 @@ export default function AdminManage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">속명</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Genus</label>
                   <select
                     name="genus"
                     value={editForm.genus}
@@ -241,7 +271,7 @@ export default function AdminManage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">종명</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Species</label>
                   <input
                     name="species"
                     value={editForm.species}
@@ -252,7 +282,7 @@ export default function AdminManage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">수집지</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Origin</label>
                 <input
                   name="origin"
                   value={editForm.origin}
@@ -263,7 +293,7 @@ export default function AdminManage() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">위도</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Latitude</label>
                   <input
                     name="lat"
                     value={editForm.lat}
@@ -272,7 +302,7 @@ export default function AdminManage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">경도</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Longitude</label>
                   <input
                     name="lng"
                     value={editForm.lng}
@@ -281,7 +311,7 @@ export default function AdminManage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">주소</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Address</label>
                   <input
                     name="address"
                     value={editForm.address}
@@ -292,7 +322,7 @@ export default function AdminManage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">설명</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
                 <textarea
                   name="description"
                   value={editForm.description}
@@ -308,7 +338,7 @@ export default function AdminManage() {
                 onClick={() => setEditTarget(null)}
                 className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                취소
+                Cancel
               </button>
               <button
                 onClick={handleEditSave}
@@ -316,7 +346,7 @@ export default function AdminManage() {
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-duckweed-600 text-white rounded-lg text-sm font-medium hover:bg-duckweed-700 transition-colors disabled:opacity-50"
               >
                 {saving ? <LuLoader className="animate-spin" /> : <LuSave />}
-                {saving ? '저장 중...' : '저장'}
+                {saving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -339,12 +369,12 @@ export default function AdminManage() {
               <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
                 <LuTriangleAlert className="text-red-600 text-lg" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">품종 삭제</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Delete Accession</h3>
             </div>
 
             <p className="text-sm text-gray-600 mb-6">
-              <span className="font-medium text-gray-900">{deleteTarget.name_kr}</span>을(를) 정말 삭제하시겠습니까?
-              이 작업은 되돌릴 수 없습니다.
+              Are you sure you want to delete <span className="font-medium text-gray-900">{deleteTarget.name_kr}</span>?
+              This action cannot be undone.
             </p>
 
             <div className="flex gap-3">
@@ -352,13 +382,13 @@ export default function AdminManage() {
                 onClick={() => setDeleteTarget(null)}
                 className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                취소
+                Cancel
               </button>
               <button
                 onClick={() => handleDelete(deleteTarget.id)}
                 className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
               >
-                삭제
+                Delete
               </button>
             </div>
           </div>

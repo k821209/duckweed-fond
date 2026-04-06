@@ -37,19 +37,19 @@ export default function AccessionDetail() {
   if (!accession) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">품종을 찾을 수 없습니다</h1>
-        <p className="text-gray-500 mb-4">요청한 품종 정보가 존재하지 않습니다.</p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Accession not found</h1>
+        <p className="text-gray-500 mb-4">The requested accession does not exist.</p>
         <Link to="/accessions" className="text-duckweed-600 hover:underline">
-          목록으로 돌아가기
+          Back to list
         </Link>
       </div>
     );
   }
 
   const tabs: { key: TabKey; label: string }[] = [
-    { key: 'info', label: '기본정보' },
-    { key: 'genomic', label: '유전체 데이터' },
-    { key: 'files', label: '파일' },
+    { key: 'info', label: 'Basic Info' },
+    { key: 'genomic', label: 'Genomic Data' },
+    { key: 'files', label: 'Files' },
   ];
 
   return (
@@ -57,11 +57,11 @@ export default function AccessionDetail() {
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-sm text-gray-500 mb-6">
         <Link to="/" className="hover:text-duckweed-600">
-          홈
+          Home
         </Link>
         <LuChevronRight className="text-xs" />
         <Link to="/accessions" className="hover:text-duckweed-600">
-          품종 목록
+          Accessions
         </Link>
         <LuChevronRight className="text-xs" />
         <span className="text-gray-900 font-medium">{accession.name_kr}</span>
@@ -95,12 +95,12 @@ export default function AccessionDetail() {
                 <div className="flex items-center gap-2 text-gray-600">
                   <LuFlaskConical className="text-duckweed-500 flex-shrink-0" />
                   <span>
-                    종명: <span className="italic">{accession.species}</span>
+                    Species: <span className="italic">{accession.species}</span>
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
                   <LuMapPin className="text-duckweed-500 flex-shrink-0" />
-                  <span>수집지: {accession.origin}</span>
+                  <span>Origin: {accession.origin}</span>
                 </div>
                 {accession.location && (
                   <div className="flex items-center gap-2 text-gray-600">
@@ -113,8 +113,8 @@ export default function AccessionDetail() {
                 <div className="flex items-center gap-2 text-gray-600">
                   <LuCalendar className="text-duckweed-500 flex-shrink-0" />
                   <span>
-                    등록일:{' '}
-                    {accession.createdAt.toLocaleDateString('ko-KR', {
+                    Date:{' '}
+                    {accession.createdAt.toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric',
@@ -161,28 +161,28 @@ export default function AccessionDetail() {
         {activeTab === 'info' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-2">설명</h3>
+              <h3 className="text-sm font-medium text-gray-500 mb-2">Description</h3>
               <p className="text-gray-700 leading-relaxed">{accession.description}</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-xs text-gray-500 mb-1">속 (Genus)</p>
+                <p className="text-xs text-gray-500 mb-1">Genus</p>
                 <p className="font-medium text-gray-900">{accession.genus}</p>
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-xs text-gray-500 mb-1">종 (Species)</p>
+                <p className="text-xs text-gray-500 mb-1">Species</p>
                 <p className="font-medium text-gray-900 italic">{accession.species}</p>
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-xs text-gray-500 mb-1">수집지</p>
+                <p className="text-xs text-gray-500 mb-1">Collection Site</p>
                 <p className="font-medium text-gray-900">{accession.origin}</p>
                 {accession.location?.address && (
                   <p className="text-xs text-gray-400 mt-0.5">{accession.location.address}</p>
                 )}
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-xs text-gray-500 mb-1">유전체 파일 수</p>
-                <p className="font-medium text-gray-900">{accession.genomicFiles.length}개</p>
+                <p className="text-xs text-gray-500 mb-1">Genomic Files</p>
+                <p className="font-medium text-gray-900">{accession.genomicFiles.length}</p>
               </div>
             </div>
           </div>
@@ -190,9 +190,9 @@ export default function AccessionDetail() {
 
         {activeTab === 'genomic' && (
           <div className="space-y-4">
-            <h3 className="text-sm font-medium text-gray-500 mb-3">유전체 데이터 파일</h3>
+            <h3 className="text-sm font-medium text-gray-500 mb-3">Genomic Data Files</h3>
             {accession.genomicFiles.length === 0 ? (
-              <p className="text-gray-400 text-sm">등록된 유전체 데이터가 없습니다.</p>
+              <p className="text-gray-400 text-sm">No genomic data available.</p>
             ) : (
               <div className="space-y-3">
                 {accession.genomicFiles.map((file, idx) => (
@@ -214,14 +214,14 @@ export default function AccessionDetail() {
                             {formatFileSize(file.fileSize)}
                           </span>
                           <span className="text-xs text-gray-400">
-                            {file.uploadedAt.toLocaleDateString('ko-KR')}
+                            {file.uploadedAt.toLocaleDateString('en-US')}
                           </span>
                         </div>
                       </div>
                     </div>
                     <button className="flex items-center gap-1 px-3 py-1.5 text-sm text-duckweed-600 border border-duckweed-200 rounded-lg hover:bg-duckweed-50 transition-colors">
                       <LuDownload className="text-sm" />
-                      다운로드
+                      Download
                     </button>
                   </div>
                 ))}
@@ -232,18 +232,18 @@ export default function AccessionDetail() {
 
         {activeTab === 'files' && (
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-3">전체 파일 목록</h3>
+            <h3 className="text-sm font-medium text-gray-500 mb-3">All Files</h3>
             {accession.genomicFiles.length === 0 ? (
-              <p className="text-gray-400 text-sm">등록된 파일이 없습니다.</p>
+              <p className="text-gray-400 text-sm">No files available.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600">파일명</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600">형식</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600">크기</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600">업로드일</th>
+                      <th className="text-left px-4 py-3 font-medium text-gray-600">File Name</th>
+                      <th className="text-left px-4 py-3 font-medium text-gray-600">Format</th>
+                      <th className="text-left px-4 py-3 font-medium text-gray-600">Size</th>
+                      <th className="text-left px-4 py-3 font-medium text-gray-600">Upload Date</th>
                       <th className="text-left px-4 py-3 font-medium text-gray-600"></th>
                     </tr>
                   </thead>
@@ -265,12 +265,12 @@ export default function AccessionDetail() {
                         </td>
                         <td className="px-4 py-3 text-gray-600">{formatFileSize(file.fileSize)}</td>
                         <td className="px-4 py-3 text-gray-500">
-                          {file.uploadedAt.toLocaleDateString('ko-KR')}
+                          {file.uploadedAt.toLocaleDateString('en-US')}
                         </td>
                         <td className="px-4 py-3">
                           <button className="flex items-center gap-1 px-3 py-1.5 text-sm text-duckweed-600 border border-duckweed-200 rounded-lg hover:bg-duckweed-50 transition-colors">
                             <LuDownload className="text-sm" />
-                            다운로드
+                            Download
                           </button>
                         </td>
                       </tr>

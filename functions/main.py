@@ -5,46 +5,23 @@
 처리 결과:   genome-browser/{species}/{processed files}
 
 지원 파일:
-- FASTA (.fa, .fasta) → bgzip → samtools faidx → .fa.gz, .fa.gz.fai, .fa.gz.gzi
+- FASTA (.fa, .fasta) → bgzip → faidx → .fa.gz, .fa.gz.fai, .fa.gz.gzi
 - GFF3 (.gff3, .gff)  → sort → bgzip → tabix → .sorted.gff3.gz, .sorted.gff3.gz.tbi
+
+pysam Python API 사용 (CLI 바이너리 불필요)
 """
 
 import os
 import subprocess
 import tempfile
 
-from firebase_admin import initialize_app, storage as admin_storage
-from firebase_functions import storage_fn, options
+import pysam
+
+from firebase_admin import initialize_app
+from firebase_functions import storage_fn, https_fn, options
 from google.cloud import storage
 
 initialize_app()
-
-# pysam 설치 경로에서 samtools/bgzip/tabix 바이너리 찾기
-import pysam
-PYSAM_DIR = os.path.dirname(pysam.__file__)
-SAMTOOLS = os.path.join(PYSAM_DIR, "samtools")
-BGZIP = os.path.join(PYSAM_DIR, "bgzip")
-TABIX = os.path.join(PYSAM_DIR, "tabix")
-
-# pysam 바이너리가 없으면 시스템 PATH에서 찾기
-if not os.path.exists(SAMTOOLS):
-    SAMTOOLS = "samtools"
-if not os.path.exists(BGZIP):
-    BGZIP = "bgzip"
-if not os.path.exists(TABIX):
-    TABIX = "tabix"
-
-
-def run_cmd(cmd: list[str], cwd: str | None = None):
-    """명령 실행 및 에러 처리"""
-    print(f"Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
-    if result.returncode != 0:
-        print(f"STDERR: {result.stderr}")
-        raise RuntimeError(f"Command failed: {' '.join(cmd)}\n{result.stderr}")
-    if result.stdout:
-        print(f"STDOUT: {result.stdout[:500]}")
-    return result
 
 
 def upload_file(bucket, local_path: str, remote_path: str):
@@ -55,16 +32,18 @@ def upload_file(bucket, local_path: str, remote_path: str):
 
 
 def process_fasta(local_path: str, bucket, species: str):
-    """FASTA → bgzip + faidx 인덱싱"""
-    tmpdir = os.path.dirname(local_path)
-    basename = os.path.basename(local_path)
-
-    # bgzip 압축
-    run_cmd([BGZIP, "-f", local_path])
+    """FASTA → bgzip + faidx 인덱싱 (pysam Python API)"""
     gz_path = local_path + ".gz"
 
-    # samtools faidx (bgzip된 FASTA에 대해 .fai + .gzi 생성)
-    run_cmd([SAMTOOLS, "faidx", gz_path])
+    # bgzip 압축
+    print(f"bgzip compressing: {local_path}")
+    pysam.tabix_compress(local_path, gz_path, force=True)
+    print(f"bgzip done: {gz_path}")
+
+    # faidx 인덱싱 (.fai + .gzi 생성)
+    print(f"faidx indexing: {gz_path}")
+    pysam.faidx(gz_path)
+    print("faidx done")
 
     fai_path = gz_path + ".fai"
     gzi_path = gz_path + ".gzi"
@@ -79,11 +58,13 @@ def process_fasta(local_path: str, bucket, species: str):
 
 
 def process_gff(local_path: str, bucket, species: str):
-    """GFF3 → sort + bgzip + tabix 인덱싱"""
+    """GFF3 → sort + bgzip + tabix 인덱싱 (pysam Python API)"""
     tmpdir = os.path.dirname(local_path)
 
     # GFF3 정렬 (chromosome, start position 기준)
     sorted_path = os.path.join(tmpdir, "genes.sorted.gff3")
+    print(f"Sorting GFF3: {local_path}")
+
     with open(sorted_path, "w") as out:
         # 헤더 추출
         with open(local_path) as f:
@@ -102,13 +83,19 @@ def process_gff(local_path: str, bucket, species: str):
     )
     if result.returncode != 0:
         print(f"Sort warning: {result.stderr}")
+    print("Sort done")
 
     # bgzip 압축
-    run_cmd([BGZIP, "-f", sorted_path])
     gz_path = sorted_path + ".gz"
+    print(f"bgzip compressing: {sorted_path}")
+    pysam.tabix_compress(sorted_path, gz_path, force=True)
+    print(f"bgzip done: {gz_path}")
 
     # tabix 인덱싱
-    run_cmd([TABIX, "-p", "gff", gz_path])
+    print(f"tabix indexing: {gz_path}")
+    pysam.tabix_index(gz_path, preset="gff")
+    print("tabix done")
+
     tbi_path = gz_path + ".tbi"
 
     # 결과 업로드
@@ -169,3 +156,73 @@ def process_genome_upload(event: storage_fn.CloudEvent[storage_fn.StorageObjectD
             return
 
     print(f"Done processing {filename}")
+
+
+def _reindex_species(species: str, bucket_name: str):
+    """주어진 종의 raw 파일들을 재인덱싱"""
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    prefix = f"genome-browser/{species}/raw/"
+
+    blobs = list(bucket.list_blobs(prefix=prefix))
+    if not blobs:
+        raise ValueError(f"No raw files found for species: {species}")
+
+    processed = []
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for blob in blobs:
+            filename = blob.name.split("/")[-1]
+            if not filename:
+                continue
+
+            local_path = os.path.join(tmpdir, filename)
+            blob.download_to_filename(local_path)
+            print(f"Downloaded: {local_path} ({os.path.getsize(local_path)} bytes)")
+
+            lower_name = filename.lower()
+            if lower_name.endswith((".fa", ".fasta")):
+                process_fasta(local_path, bucket, species)
+                processed.append(f"FASTA: {filename}")
+            elif lower_name.endswith((".gff3", ".gff")):
+                process_gff(local_path, bucket, species)
+                processed.append(f"GFF3: {filename}")
+
+    return processed
+
+
+@https_fn.on_call(
+    region="us-central1",
+    memory=options.MemoryOption.GB_2,
+    timeout_sec=540,
+    cpu=2,
+)
+def reindex_genome(req: https_fn.CallableRequest):
+    """HTTP callable: 기존 업로드된 게놈 파일 재인덱싱"""
+
+    # 인증 확인
+    if not req.auth:
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.UNAUTHENTICATED,
+            message="Authentication required",
+        )
+
+    species = req.data.get("species") if req.data else None
+    if not species:
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
+            message="species is required",
+        )
+
+    print(f"Reindex requested for species: {species} by user: {req.auth.uid}")
+
+    bucket_name = os.environ.get("STORAGE_BUCKET", "duckweed-fond.firebasestorage.app")
+
+    try:
+        processed = _reindex_species(species, bucket_name)
+        return {"success": True, "processed": processed}
+    except Exception as e:
+        print(f"Reindex error: {e}")
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.INTERNAL,
+            message=str(e),
+        )
